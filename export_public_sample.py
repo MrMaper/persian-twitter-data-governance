@@ -83,7 +83,9 @@ CC BY-NC 4.0 (Attribution-NonCommercial 4.0 International). Non-commercial use w
 This sample includes the full text of tweets (with no user identity information) for research and educational purposes. These texts were originally collected from Twitter/X; if the original tweet is later deleted or made private by its author, the corresponding content in this archive may no longer be available on the source platform. Downstream users of this dataset should respect Twitter/X's developer policies when reusing this data.
 
 ## Citation
-To be completed by the author once the paper is accepted; the dataset's DOI will be added here once published on Zenodo.
+Roustaei, M. (2026). *Persian Twitter Data Governance Sample: Quality- and Bias-Filtered Corpus* [Data set]. Zenodo. https://doi.org/10.5281/zenodo.21903923
+
+Full paper citation to be completed once accepted: *"Evaluating Data Quality and Bias of Social Media in Persian Large Language Models: A Data Governance Approach"* (Journal of Computing Sciences and Information Technology, Computer Society of Iran).
 """)
 
     print(f"exported {len(sample)} records to {out_path}")

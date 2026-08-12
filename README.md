@@ -2,7 +2,9 @@
 
 Reference implementation of a data governance pipeline for cleaning, scoring, and de-biasing Persian-language Twitter data used to train large language models. It computes a per-tweet quality score $Q(t)$ and a lexical bias index $B(t)$, then produces a balanced corpus via weighted resampling. This repository accompanies the paper *"Evaluating Data Quality and Bias of Social Media in Persian Large Language Models: A Data Governance Approach"* (Journal of Computing Sciences and Information Technology, Computer Society of Iran).
 
-A public, anonymized sample of the pipeline's final output (8,000 records) is released separately on Zenodo; the DOI will be added here once published. **Raw Twitter data is not distributed in this repository** (privacy and data-ownership considerations).
+A public, anonymized sample of the pipeline's final output (8,000 records) is released separately on Zenodo: [10.5281/zenodo.21903923](https://doi.org/10.5281/zenodo.21903923). **Raw Twitter data is not distributed in this repository** (privacy and data-ownership considerations).
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21904125.svg)](https://doi.org/10.5281/zenodo.21904125)
 
 ## Architecture
 
@@ -114,7 +116,11 @@ Compiled manually in three steps — extracting candidates from the corpus's rea
 
 ## Citation
 
-Citation details (DOI and full reference) will be added here once the paper is accepted.
+Code: Roustaei, M. (2026). *persian-twitter-data-governance* (v1.0.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.21904125
+
+Dataset sample: Roustaei, M. (2026). *Persian Twitter Data Governance Sample: Quality- and Bias-Filtered Corpus* [Data set]. Zenodo. https://doi.org/10.5281/zenodo.21903923
+
+Paper: full citation will be added here once accepted — *"Evaluating Data Quality and Bias of Social Media in Persian Large Language Models: A Data Governance Approach"* (Journal of Computing Sciences and Information Technology, Computer Society of Iran).
 
 ## License
 
