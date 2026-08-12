@@ -1,6 +1,6 @@
 # Persian Twitter Data Governance Framework
 
-Reference implementation of a data governance pipeline for cleaning, scoring, and de-biasing Persian-language Twitter data used to train large language models. It computes a per-tweet quality score $Q(t)$ and a lexical bias index $B(t)$, then produces a balanced corpus via weighted resampling. This repository accompanies the paper *"Quality and Bias Assessment of Social Media Data for Training Persian Large Language Models: A Data Governance Framework"* (Journal of Computing Sciences and Information Technology, Computer Society of Iran).
+Reference implementation of a data governance pipeline for cleaning, scoring, and de-biasing Persian-language Twitter data used to train large language models. It computes a per-tweet quality score $Q(t)$ and a lexical bias index $B(t)$, then produces a balanced corpus via weighted resampling. This repository accompanies the paper *"Evaluating Data Quality and Bias of Social Media in Persian Large Language Models: A Data Governance Approach"* (Journal of Computing Sciences and Information Technology, Computer Society of Iran).
 
 A public, anonymized sample of the pipeline's final output (8,000 records) is released separately on Zenodo; the DOI will be added here once published. **Raw Twitter data is not distributed in this repository** (privacy and data-ownership considerations).
 
