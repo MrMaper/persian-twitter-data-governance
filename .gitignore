@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+
+# raw/derived data are not distributed in this repo (privacy + size)
+data/
+out/
+public_sample/*.jsonl
+downstream/corpora/
+downstream/sentiment_data/
+downstream/models/
+downstream/clf/
+downstream/*_generations.json
+
+.DS_Store
