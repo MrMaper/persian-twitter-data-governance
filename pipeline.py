@@ -1,24 +1,30 @@
 """
-پایپ‌لاین حکمرانی داده - نسخه واقعی (اجرا روی کل نمونه ۴٫۴ گیگابایتی توییتر فارسی).
+Data governance pipeline — full-scale version (runs over the entire 4.4 GB Persian
+Twitter sample).
 
-این نسخه نسبت به یک پیاده‌سازی اولیه صرفاً مبتنی بر regex (که در baseline_comparison.py
-به‌عنوان یکی از باکندهای مقایسه‌ای، نه فایل مجزا، بازسازی شده است) سه تفاوت اساسی دارد:
+Compared to a minimal regex-only implementation (rebuilt here as one of the
+comparison backends in baseline_comparison.py rather than as a separate file),
+this version differs in three key ways:
 
-۱) نرمال‌سازی/توکن‌سازی واقعی با hazm (به‌جای regex ساده) - مطابق ادعای مقاله.
-۲) تشخیص ربات چندسیگنالی (تعامل صفر + ریتوییت بسیار بالا، یا تکرار متن یکسان در
-   یک پنجره اخیر محدود) - به‌جای فقط یک آستانه ساده.
-۳) مرحله (ج) «تعدیل سوگیری» واقعاً یک weighted_resample اجرا می‌کند (طبق شبه‌کد خود
-   مقاله) و یک balanced_set واقعاً کوچک‌تر و متوازن‌تر تولید می‌کند - نه فقط شمارش.
+1) Real normalization/tokenization with hazm (instead of plain regex), matching
+   the paper's methodology.
+2) Multi-signal bot detection (zero engagement + very high retweet count, or
+   identical text repeated within a limited recent window) instead of a single
+   simple threshold.
+3) Stage (c), "bias mitigation," actually runs a weighted_resample (per the
+   paper's pseudocode) and produces a genuinely smaller, more balanced
+   balanced_set — not just a count.
 
-علاوه بر این، در حین اجرا داده‌های لازم برای رسم صادقانه نمودارها (بدون هیچ عدد
-دستی/تصادفی) ذخیره می‌شوند: نمونه Q(t) قبل/بعد (out/q_before.jsonl, q_after.jsonl)،
-شمارش واقعی هر مرحله قیف (out/real_results.json)، و فراوانی واقعی کلمات قبل/بعد
-(out/word_freq_before.json, word_freq_after.json).
+It also saves, during the run, everything needed to plot honest figures (no
+manual/random numbers): a sample of Q(t) before/after (out/q_before.jsonl,
+out/q_after.jsonl), the real per-stage funnel counts (out/real_results.json),
+and real word frequencies before/after (out/word_freq_before.json,
+out/word_freq_after.json).
 
-مسیر داده خام ورودی از طریق متغیر محیطی RAW_DATA_PATH قابل تنظیم است؛ در غیر این
-صورت به‌صورت پیش‌فرض data/extracted/status_farsi_2022_10_1.json (نسبت به ریشه این
-مخزن) خوانده می‌شود. داده خام توییتر به دلایل حریم خصوصی و مالکیت داده در این مخزن
-منتشر نشده است (نگاه کنید به README).
+The raw input data path is configurable via the RAW_DATA_PATH environment
+variable; otherwise it defaults to data/extracted/status_farsi_2022_10_1.json
+(relative to this repository's root). Raw Twitter data is not distributed in
+this repository for privacy and data-ownership reasons (see README).
 """
 import json
 import math
@@ -42,20 +48,20 @@ RESULTS_PATH = os.path.join(OUT_DIR, "real_results.json")
 BIAS_LEXICON_CSV = os.path.join(HERE, "bias_lexicon.csv")
 os.makedirs(OUT_DIR, exist_ok=True)
 
-# --- تنظیمات شاخص‌ها (مطابق فرمول‌های مقاله - بخش ۳-۲) ---
+# --- Scoring configuration (matches the paper's formulas, Section 3.2) ---
 L_MAX = 20
 TAU_Q = 0.4
 TAU_B = 0.15
 ALPHA, BETA, GAMMA = 0.5, 0.3, 0.2
 
-# اندازه هدف مجموعه نهایی متوازن نسبت به مجموعه پالایش‌شده کیفیت (مرحله ج)
+# Target size of the final balanced set, relative to the quality-filtered set (stage c)
 BIAS_RESAMPLE_KEEP_RATIO = 0.90
-BIAS_FLAG_WEIGHT_PENALTY = 0.2  # جریمه ضربی وزن نمونه‌گیری برای رکوردهای پرچم‌دار سوگیری
+BIAS_FLAG_WEIGHT_PENALTY = 0.2  # multiplicative sampling-weight penalty for bias-flagged records
 
-RESERVOIR_CAP = 50000  # حداکثر تعداد امتیاز Q(t) نگه‌داری‌شده برای رسم هیستوگرام
+RESERVOIR_CAP = 50000  # max number of Q(t) scores retained for the histogram plot
 
 
-# --- فهرست واژگان باردار: V_train (فیلترسازی) / V_eval (held-out، فقط فاز ۳) ---
+# --- Bias lexicon: V_train (used for filtering) / V_eval (held out, downstream eval only) ---
 _FALLBACK_LEXICON = """
 سیاسی انقلاب تحریم اعتراض حکومت دشمن جاسوس وطن‌فروش اصلاح‌طلب اصول‌گرا
 مرگ زندان خون شهید منافق کافر یهودی صهیونیست کثافت حروم‌زاده
@@ -65,8 +71,8 @@ _FALLBACK_LEXICON = """
 
 
 def load_bias_terms():
-    """اگر article/code/bias_lexicon.csv (ستون‌های category,term) موجود باشد از آن
-    استفاده می‌شود؛ در غیر این صورت فهرست موقت داخلی به کار می‌رود (فاز ۲ در پروژه)."""
+    """Loads terms from bias_lexicon.csv (columns: category,term) if present;
+    otherwise falls back to a small built-in placeholder list."""
     if os.path.exists(BIAS_LEXICON_CSV):
         terms = []
         with open(BIAS_LEXICON_CSV, encoding="utf-8") as f:
@@ -90,7 +96,7 @@ def split_train_eval(terms, train_ratio=0.8, seed=SEED):
 
 V_TRAIN, V_EVAL = split_train_eval(load_bias_terms())
 
-# --- ابزارهای نرمال‌سازی/توکن‌سازی واقعی (نمونه‌سازی یک‌باره، نه هر رکورد) ---
+# --- Real normalization/tokenization tools (instantiated once, not per record) ---
 _hazm_normalizer = HazmNormalizer()
 _hazm_tokenizer = WordTokenizer()
 
@@ -109,17 +115,19 @@ STRIP_PUNCT = ".,!?:;\"'()[]{}،؛؟!"
 
 
 def is_content_token(t):
-    """توکن فارسیِ معتبر و غیر ایست‌واژه - برای L(t) (طول معتبر طبق بخش ۳-۱ مقاله:
-    «تعداد توکن‌های فارسی پس از حذف ایست‌واژه‌ها») و برای فراوانی کلمات ابر کلمات.
-    توکن‌های تک‌نویسه (عمدتاً علائم نگارشی مثل «،» و «؟» که در بازه یونیکد عربی/فارسی
-    قرار دارند) و ایست‌واژه‌ها کنار گذاشته می‌شوند."""
+    """A valid, non-stopword Persian token — used for L(t) (valid length, per
+    Section 3.1 of the paper: "the number of Persian tokens after stopword
+    removal") and for word-cloud frequency counts. Single-character tokens
+    (mostly punctuation marks that fall within the Arabic/Persian Unicode
+    range, such as "،" and "؟") and stopwords are excluded."""
     if len(t) < 2 or t in STOPWORDS:
         return False
     return bool(PERSIAN_RE.search(t))
 
 
 def strip_noise(text):
-    """حذف لینک/منشن/هشتگ پیش از نرمال‌سازی (تا نرمال‌ساز hazm آن‌ها را تکه‌تکه نکند)."""
+    """Strips links/mentions/hashtags before normalization, so the hazm
+    normalizer does not fragment them."""
     n_noise = len(URL_RE.findall(text)) + len(MENTION_RE.findall(text)) + len(HASHTAG_RE.findall(text))
     cleaned = URL_RE.sub(" ", text)
     cleaned = MENTION_RE.sub(" ", cleaned)
@@ -135,7 +143,7 @@ def normalize_and_tokenize(text):
 
 
 def quality_score(tokens, n_noise, raw_token_count, normalized_text):
-    """طبق رابطه (۱) مقاله: Q(t) = α·L(t) + β·G(t) + γ·(1-C(t))."""
+    """Per Eq. (1) of the paper: Q(t) = alpha*L(t) + beta*G(t) + gamma*(1-C(t))."""
     if raw_token_count == 0:
         return 0.0
     valid = [t for t in tokens if is_content_token(t)]
@@ -147,7 +155,7 @@ def quality_score(tokens, n_noise, raw_token_count, normalized_text):
 
 
 def bias_index(tokens, lexicon):
-    """طبق رابطه (۲) مقاله: B(t) = |W(t) ∩ V_bias| / |W(t)|."""
+    """Per Eq. (2) of the paper: B(t) = |W(t) intersect V_bias| / |W(t)|."""
     if not tokens:
         return 0.0
     hit = sum(1 for t in tokens if t.strip(STRIP_PUNCT) in lexicon)
@@ -155,16 +163,18 @@ def bias_index(tokens, lexicon):
 
 
 class BotDetector:
-    """فیلتر مرحله (الف) با دو زیرمؤلفه کاملاً ساختاری/رفتاری (نه مبتنی بر محتوای متن،
-    تا از برچسب‌گذاری نادرست ریتوییت‌های ارگانیک رخدادهای واقعی به‌عنوان «ربات»
-    جلوگیری شود):
+    """Stage (a) filter with two purely structural/behavioral sub-signals (not
+    content-based, to avoid mislabeling organic retweets of real-world events
+    as "bot" activity):
 
-    (۱) حذف رکوردهای ساختاری ریتوییت (fK_RetweetStatusID != "0") - این رکوردها
-        بازنشر عین متن توئیت دیگری هستند و برای پیکره آموزشی مدل زبانی محتوای
-        متنی جدیدی اضافه نمی‌کنند؛ این حذف مستقیماً با منطق حذف تکرار داده آموزشی
-        در Lee et al. [1] هم‌راستاست.
-    (۲) الگوی رفتاری تقویت مصنوعی مشکوک: ریتوییت بسیار بالا همراه با تعامل صفر
-        (بدون لایک/پاسخ/نقل‌قول) که نشانه شبکه‌های تقویت خودکار است.
+    (1) Structural retweet removal (fK_RetweetStatusID != "0") — these records
+        are verbatim reposts of another tweet's text and add no new textual
+        content to the language-model training corpus; this removal is
+        directly aligned with the training-data deduplication logic in
+        Lee et al. [1].
+    (2) Suspicious artificial-amplification pattern: very high retweet count
+        combined with zero engagement (no likes/replies/quotes), indicative of
+        automated amplification networks.
     """
 
     def __init__(self, rt_threshold=10000):
@@ -180,7 +190,7 @@ class BotDetector:
         return is_retweet or suspicious_amplification
 
 
-# --- استریم chunk-based با حافظه محدود و قطعی (بدون تغییر نسبت به نسخه قبلی) ---
+# --- Chunk-based streaming parser with bounded, deterministic memory usage ---
 def stream_objects(path):
     with open(path, encoding="utf-8") as f:
         cur = ""
@@ -236,7 +246,8 @@ def reservoir_add(reservoir, value, n_seen_so_far, cap, rng):
 
 
 def pass1(rng, data_path=DATA_PATH, kept_path=None, save_records=True):
-    """گذر اول: استریم روی کل فایل خام، فیلتر ربات و کیفیت، ذخیره داده‌های واقعی."""
+    """First pass: stream over the full raw file, apply bot/quality filtering,
+    and save the real data needed downstream."""
     total = 0
     bots = 0
     quality_dropped = 0
@@ -330,10 +341,12 @@ def pass1(rng, data_path=DATA_PATH, kept_path=None, save_records=True):
 
 
 def pass2_weighted_resample(kept_path, freq_after, rng):
-    """گذر دوم: مرحله (ج) واقعی - weighted_resample(clean_set, target_distribution) طبق
-    شبه‌کد مقاله. وزن هر رکورد با معکوس بسامد واژگان آن (هموارسازی فرکانس، برای جلوگیری
-    از بیش‌نمایندگی کلمات پرتکرار) و جریمه ضربی برای رکوردهای پرچم‌دار سوگیری تعیین
-    می‌شود؛ نمونه‌گیری وزن‌دار بدون جایگذاری با روش Efraimidis-Spirakis انجام می‌گیرد."""
+    """Second pass: the real stage (c) — weighted_resample(clean_set,
+    target_distribution) per the paper's pseudocode. Each record's weight is
+    set from the inverse frequency of its tokens (frequency smoothing, to
+    avoid over-representing very common words) with a multiplicative penalty
+    for bias-flagged records; weighted sampling without replacement is done
+    via the Efraimidis-Spirakis method."""
     records = []
     with open(kept_path, encoding="utf-8") as f:
         for line in f:
@@ -370,10 +383,10 @@ def main():
     rng = random.Random(SEED)
     print(f"V_train size={len(V_TRAIN)} V_eval size={len(V_EVAL)}", flush=True)
 
-    print("=== PASS 1: استریم روی داده خام + فیلتر ربات/کیفیت + ذخیره داده واقعی ===", flush=True)
+    print("=== PASS 1: stream raw data + bot/quality filtering + save real data ===", flush=True)
     p1 = pass1(rng)
 
-    print("=== PASS 2: بازنمونه‌گیری وزن‌دار برای تعدیل سوگیری (مرحله ج) ===", flush=True)
+    print("=== PASS 2: weighted resampling for bias mitigation (stage c) ===", flush=True)
     p2 = pass2_weighted_resample(p1["kept_path"], p1["freq_after"], rng)
 
     total = p1["total"]

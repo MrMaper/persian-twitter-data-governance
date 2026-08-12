@@ -1,8 +1,8 @@
 """
-سنجش Perplexity یک مدل روی validation set مشترک (کاملاً جدا از هر دو پیکره آموزشی
-RAW و GOVERNED) - فاز ۳، پاسخ به داور ۲.
+Measures a model's perplexity on a shared validation set (fully separate from
+both the RAW and GOVERNED training corpora).
 
-اجرا:
+Usage:
     python eval_perplexity.py --model models/raw
     python eval_perplexity.py --model models/governed
 """
@@ -10,7 +10,7 @@ import argparse
 import math
 import os
 
-os.environ.setdefault("HF_HUB_DISABLE_XET", "1")  # پروتکل xet روی برخی شبکه‌ها هنگ می‌کند
+os.environ.setdefault("HF_HUB_DISABLE_XET", "1")  # the xet protocol hangs on some networks
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer

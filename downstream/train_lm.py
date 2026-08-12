@@ -1,17 +1,17 @@
 """
-ادامه‌آموزش (Continued Pretraining) gpt2-persian روی پیکره خام یا پالایش‌شده (فاز ۳،
-پاسخ به داور ۲ درباره ارزیابی downstream). دو مدل با تنظیمات کاملاً یکسان (seed،
-تعداد گام، نرخ یادگیری) روی دو پیکره متفاوت آموزش داده می‌شوند تا تنها متغیر مستقل،
-کیفیت داده آموزشی باشد.
+Continued pretraining of gpt2-persian on the raw or governed corpus. Two
+models are trained with identical settings (seed, step count, learning rate)
+on the two different corpora, so the only independent variable is training
+data quality.
 
-اجرا:
+Usage:
     python train_lm.py --corpus corpora/train_raw.txt       --out models/raw
     python train_lm.py --corpus corpora/train_governed.txt  --out models/governed
 """
 import argparse
 import os
 
-os.environ.setdefault("HF_HUB_DISABLE_XET", "1")  # پروتکل xet روی برخی شبکه‌ها هنگ می‌کند
+os.environ.setdefault("HF_HUB_DISABLE_XET", "1")  # the xet protocol hangs on some networks
 
 import torch
 from datasets import Dataset
@@ -25,13 +25,14 @@ from transformers import (
 )
 
 BASE_MODEL = "flax-community/gpt2-persian-question-answering"
-# یادداشت: bolbolzaban/gpt2-persian تنها به‌صورت pytorch_model.bin (pickle) منتشر شده و
-# transformers/torch جدید بارگذاری آن را به دلایل امنیتی (CVE-2025-32434) بدون torch>=2.6
-# مسدود می‌کند؛ این مدل جایگزین (بر پایه gpt2-persian اصلی، فاین‌تیون‌شده برای QA) دارای
-# فرمت امن‌تر safetensors است.
+# Note: bolbolzaban/gpt2-persian is only distributed as pytorch_model.bin
+# (pickle), which recent transformers/torch versions block loading for
+# security reasons (CVE-2025-32434) without torch>=2.6; this alternative
+# model (based on the original gpt2-persian, fine-tuned for QA) ships with the
+# safer safetensors format instead.
 SEED = 42
 BLOCK_SIZE = 128
-MAX_STEPS = 3000  # بودجه محاسباتی ثابت و یکسان برای هر دو مدل (کنترل حجم آموزش)
+MAX_STEPS = 3000  # fixed, identical compute budget for both models (controls training volume)
 
 
 def load_lines(path):

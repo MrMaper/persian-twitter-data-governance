@@ -1,10 +1,12 @@
 """
-آزمایش جایگزین برای مرحله (ج): به‌جای وزن‌دهی احتمالاتی (جریمه ضربی ۰٫۲ در
-pipeline.py)، رکوردهای پرچم‌دار سوگیری به‌طور کامل و قطعی حذف می‌شوند (حذف سخت)،
-سپس بازنمونه‌گیری وزن‌دار بر پایه هموارسازی فرکانس روی باقی‌مانده اعمال می‌گردد.
-هدف: بررسی اینکه آیا حذف قطعی، شکاف مشاهده‌شده در ارزیابی بی‌طرفی تولیدات (بخش
-۴-۶) را نسبت به وزن‌دهی احتمالاتی می‌بندد یا خیر. خروجی در فایل جداگانه ذخیره
-می‌شود تا نتایج اصلی pipeline.py دست‌نخورده بماند.
+An alternative experiment for stage (c): instead of probabilistic reweighting
+(the 0.2 multiplicative penalty in pipeline.py), bias-flagged records are
+removed completely and deterministically (hard filtering), then frequency-
+smoothed weighted resampling is applied to what remains.
+
+Goal: check whether hard removal closes the gap observed in the exploratory
+generation-fairness evaluation, compared to probabilistic reweighting. Output
+is saved to a separate file so pipeline.py's main results stay untouched.
 """
 import json
 import math
@@ -33,7 +35,7 @@ def main():
     print(f"bias-flagged (hard-removed): {n_removed} ({n_removed/n_total*100:.3f}%)")
     print(f"remaining after hard filter: {len(kept)}")
 
-    # فراوانی واژگان محتوایی روی مجموعه پس از حذف سخت (برای هموارسازی فرکانس)
+    # content-token frequency over the set after hard filtering (for frequency smoothing)
     freq_after = {}
     for r in kept:
         for t in r["tokens"]:
@@ -48,8 +50,9 @@ def main():
         avg_freq = (sum(freq_after[t] for t in toks) / len(toks)) if toks else 1.0
         weights[i] = max(1.0 / (1.0 + math.log1p(avg_freq)), 1e-9)
 
-    # همان نسبت هدف پایپ‌لاین اصلی (۹۰٪) اما این‌بار نسبت به مجموعه *اصلی* پیش از
-    # فیلترکیفیت تا اندازه پیکره نهایی با نسخه wsampling قابل‌مقایسه بماند.
+    # Same target ratio as the main pipeline (90%), but this time relative to
+    # the *original* pre-filter set, so the final corpus size stays comparable
+    # to the weighted-resampling version.
     target_size = int(n_total * p.BIAS_RESAMPLE_KEEP_RATIO)
     target_size = min(target_size, n)
     keys = [(rng.random() ** (1.0 / weights[i]), i) for i in range(n)]

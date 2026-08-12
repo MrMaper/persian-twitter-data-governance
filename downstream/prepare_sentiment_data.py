@@ -1,8 +1,9 @@
 """
-دانلود مستقیم زیرمجموعه «کلی» (overall) دیتاست احساس ParsiNLU (خوراک + فیلم) از
-مخزن گیت‌هاب رسمی persiannlp/parsinlu (کتابخانه HF `datasets` دیگر از لودر اسکریپتی
-این دیتاست پشتیبانی نمی‌کند، بنابراین فایل‌های JSONL مستقیماً دانلود می‌شوند).
-برچسب‌های ۷تایی (-3 تا 3) به سه کلاس منفی/خنثی/مثبت نگاشت می‌شوند.
+Downloads the "overall" subset of the ParsiNLU sentiment dataset (food +
+movie) directly from the official persiannlp/parsinlu GitHub repository (the
+HF `datasets` library no longer supports this dataset's script-based loader,
+so the JSONL files are downloaded directly). The 7-point labels (-3 to 3) are
+mapped to three classes: negative/neutral/positive.
 """
 import json
 import os
@@ -26,10 +27,10 @@ FILES = {
 def label_to_class(label):
     v = int(label)
     if v <= -1:
-        return 0  # منفی
+        return 0  # negative
     if v == 0:
-        return 1  # خنثی
-    return 2  # مثبت
+        return 1  # neutral
+    return 2  # positive
 
 
 def download(name, fname):

@@ -1,9 +1,10 @@
 """
-فاین‌تیون یک classification head (۳ کلاس: منفی/خنثی/مثبت) روی هر یک از دو مدل
-ادامه‌آموزش‌دیده (RAW/GOVERNED) با استفاده از دیتاست ParsiNLU sentiment (خوراک+فیلم،
-زیرمجموعه «کلی») و مقایسه دقت روی مجموعه آزمون - فاز ۳، پاسخ به داور ۲.
+Fine-tunes a classification head (3 classes: negative/neutral/positive) on top
+of each of the two continually pretrained models (RAW/GOVERNED), using the
+ParsiNLU sentiment dataset (food + movie, "overall" subset), and compares
+accuracy on the test set.
 
-اجرا:
+Usage:
     python train_classifier.py --model models/raw       --out clf/raw
     python train_classifier.py --model models/governed  --out clf/governed
 """
@@ -11,7 +12,7 @@ import argparse
 import json
 import os
 
-os.environ.setdefault("HF_HUB_DISABLE_XET", "1")  # پروتکل xet روی برخی شبکه‌ها هنگ می‌کند
+os.environ.setdefault("HF_HUB_DISABLE_XET", "1")  # the xet protocol hangs on some networks
 
 import numpy as np
 import torch

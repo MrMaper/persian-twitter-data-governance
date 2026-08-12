@@ -1,7 +1,8 @@
 """
-تحلیل حساسیت پارامترها (پاسخ به داور ۲، بند ۳): اجرای چارچوب با ترکیب‌های مختلف
-L_max و (α, β, γ) روی همان نمونه، و گزارش اثر هر ترکیب بر میانگین Q، نرخ نگه‌داری
-و نرخ سوگیری - برای توجیه تجربی مقادیر پیش‌فرض انتخاب‌شده در مقاله.
+Parameter sensitivity analysis: runs the framework with different combinations
+of L_max and (alpha, beta, gamma) on the same sample, and reports the effect of
+each combination on mean Q, keep rate, and bias rate — providing empirical
+justification for the default values chosen in the paper.
 """
 import json
 import os
@@ -15,7 +16,7 @@ OUT_PATH = os.path.join(HERE, "out", "param_sensitivity.json")
 
 L_MAX_GRID = [10, 15, 20, 25, 30]
 WEIGHT_GRID = [
-    (0.5, 0.3, 0.2),  # مقدار پیش‌فرض مقاله
+    (0.5, 0.3, 0.2),  # paper's default value
     (0.7, 0.2, 0.1),
     (0.3, 0.5, 0.2),
     (0.4, 0.2, 0.4),
@@ -44,14 +45,14 @@ def main(data_path=DEFAULT_DATA_PATH):
     orig_lmax, orig_a, orig_b, orig_g = p.L_MAX, p.ALPHA, p.BETA, p.GAMMA
     rows = []
 
-    print("--- grid روی L_max (با وزن‌های پیش‌فرض) ---", flush=True)
+    print("--- grid over L_max (with default weights) ---", flush=True)
     for l_max in L_MAX_GRID:
         row = run_once(data_path, l_max, orig_a, orig_b, orig_g)
         row["sweep"] = "L_max"
         rows.append(row)
         print(row, flush=True)
 
-    print("--- grid روی (alpha, beta, gamma) (با L_max پیش‌فرض) ---", flush=True)
+    print("--- grid over (alpha, beta, gamma) (with default L_max) ---", flush=True)
     for alpha, beta, gamma in WEIGHT_GRID:
         row = run_once(data_path, orig_lmax, alpha, beta, gamma)
         row["sweep"] = "weights"

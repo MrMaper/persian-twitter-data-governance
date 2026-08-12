@@ -1,12 +1,12 @@
 """
-خروجی‌گیری نمونه عمومی و ناشناس‌سازی‌شده از مجموعه‌داده پالایش‌شده (برای پاسخ به داور ۱).
+Exports a public, anonymized sample from the governed dataset.
 
-فقط از article/out/balanced_set.jsonl (خروجی نهایی چارچوب پیشنهادی، پس از هر سه
-مرحله پاک‌سازی/کیفیت/تعدیل سوگیری) نمونه می‌گیرد - نه از داده خام. هیچ فیلد هویتی
-(fK_UserID و مشابه) در ورودی این فایل اصلاً وجود ندارد چون pipeline.py آن را از ابتدا
-ذخیره نکرده است؛ بنابراین نیازی به حذف پسینی نیست، اما به‌عنوان دفاع دوم (defense in
-depth) یک بررسی صریح هم انجام می‌شود تا اطمینان حاصل شود هیچ فیلد هویتی به‌صورت
-تصادفی درون متن یا فراداده باقی نمانده است.
+Samples only from out/balanced_set.jsonl (the framework's final output, after
+all three stages of cleaning/quality/bias mitigation) — never from raw data.
+No identity field (fK_UserID or similar) exists in this file's input at all,
+since pipeline.py never stores it in the first place; so no removal should be
+needed, but as defense in depth an explicit check is still run to make sure no
+identity-related field has accidentally survived in the text or metadata.
 """
 import json
 import os
@@ -26,14 +26,15 @@ MENTION_RE = re.compile(r"@\w+")
 
 
 def strip_identity(record):
-    """دفاع دوم: حذف صریح هر فیلد با نام مرتبط با هویت کاربر، در صورت وجود."""
+    """Defense in depth: explicitly drop any field whose name is associated
+    with user identity, if present."""
     cleaned = {k: v for k, v in record.items() if k.lower() not in IDENTITY_FIELD_NAMES}
     return cleaned
 
 
 def main():
     if not os.path.exists(BALANCED_PATH):
-        print("balanced_set.jsonl یافت نشد. ابتدا pipeline.py را کامل اجرا کنید.")
+        print("balanced_set.jsonl not found. Run pipeline.py to completion first.")
         return
 
     records = []
@@ -55,37 +56,34 @@ def main():
 
     readme_path = os.path.join(EXPORT_DIR, "README.md")
     with open(readme_path, "w", encoding="utf-8") as f:
-        f.write(f"""# نمونه عمومی داده پالایش‌شده - چارچوب حکمرانی داده توییتر فارسی
+        f.write(f"""# Public Sample of Governed Data — Persian Twitter Data Governance Framework
 
-## توضیح
-این فایل ({SAMPLE_SIZE} رکورد) زیرنمونه‌ای تصادفی از خروجی نهایی چارچوب پیشنهادی
-(پس از سه مرحله پاک‌سازی نویز، فیلتر کیفیت و تعدیل سوگیری) است. برای تکرارپذیری
-نتایج و بررسی روش‌شناسی توسط سایر پژوهشگران منتشر شده است.
+## Description
+This file ({SAMPLE_SIZE} records) is a random subsample of the final output of the proposed framework, after all three stages of noise cleaning, quality filtering, and bias mitigation. It is released to support reproducibility and methodological review by other researchers.
 
-**این فایل شامل داده خام توییتر یا شناسه هویتی کاربران نیست** - فقط توئیت‌های
-نهایی پالایش‌شده و امتیازهای محاسبه‌شده.
+**This file contains no raw Twitter data and no user identity information** — only the final, governed tweets and their computed scores.
 
-## فیلدهای هر رکورد
-| فیلد | توضیح |
+## Record fields
+| Field | Description |
 |---|---|
-| `id` | شناسه یکتای توئیت (برای ردیابی منشأ - بدون اطلاعات هویتی کاربر) |
-| `text` | متن نرمال‌سازی‌شده پس از پاک‌سازی نویز |
-| `tokens` | فهرست توکن‌های حاصل از hazm.WordTokenizer |
-| `q` | امتیاز کیفیت Q(t) طبق رابطه (۱) مقاله |
-| `b` | شاخص سوگیری لغوی B(t) طبق رابطه (۲) مقاله |
-| `bias_flagged` | آیا B(t) از آستانه τ_B عبور کرده است |
+| `id` | Unique tweet ID (for provenance tracking — no user identity information) |
+| `text` | Normalized text after noise cleaning |
+| `tokens` | Token list produced by `hazm.WordTokenizer` |
+| `q` | Quality score $Q(t)$ per Eq. (1) of the paper |
+| `b` | Lexical bias index $B(t)$ per Eq. (2) of the paper |
+| `bias_flagged` | Whether $B(t)$ exceeded the threshold $\\tau_B$ |
 
-## روش ناشناس‌سازی
-مجموعه اصلی pipeline.py هرگز فیلدهای هویتی کاربر (نظیر fK_UserID) را در خروجی
-kept_records.jsonl / balanced_set.jsonl ذخیره نمی‌کند - این فیلدها از همان مرحله
-اول (Pass 1) کنار گذاشته می‌شوند. به‌عنوان دفاع دوم، این اسکریپت (export_public_sample.py)
-هرگونه فیلد باقی‌مانده با نام مرتبط با هویت را نیز صراحتاً حذف می‌کند.
+## Anonymization method
+The core pipeline (`pipeline.py`) never stores user identity fields (e.g. `fK_UserID`) in `kept_records.jsonl` / `balanced_set.jsonl` — these fields are dropped as early as Pass 1. As defense in depth, this script (`export_public_sample.py`) also explicitly strips any remaining field whose name is associated with user identity.
 
-## مجوز استفاده
-[توسط نویسنده تکمیل شود - مثلاً CC BY-NC 4.0]
+## License
+CC BY-NC 4.0 (Attribution-NonCommercial 4.0 International). Non-commercial use with attribution is permitted; contact the author for commercial use.
 
-## استناد
-[توسط نویسنده تکمیل شود - پس از پذیرش نهایی مقاله]
+## Note on Twitter/X policy
+This sample includes the full text of tweets (with no user identity information) for research and educational purposes. These texts were originally collected from Twitter/X; if the original tweet is later deleted or made private by its author, the corresponding content in this archive may no longer be available on the source platform. Downstream users of this dataset should respect Twitter/X's developer policies when reusing this data.
+
+## Citation
+To be completed by the author once the paper is accepted; the dataset's DOI will be added here once published on Zenodo.
 """)
 
     print(f"exported {len(sample)} records to {out_path}")

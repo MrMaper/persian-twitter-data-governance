@@ -1,16 +1,17 @@
 """
-ساخت دو پیکره متنی برای آزمایش downstream (فاز ۳، پاسخ به داور ۲):
+Builds two text corpora for the downstream evaluation:
 
-- RAW: متن خام توئیت‌ها پیش از عبور از چارچوب پیشنهادی.
-- GOVERNED: متن نهایی پس از هر سه مرحله (پاک‌سازی، فیلتر کیفیت، تعدیل سوگیری) -
-  دقیقاً همان article/out/balanced_set.jsonl تولیدشده توسط pipeline.py.
+- RAW: raw tweet text, before passing through the proposed framework.
+- GOVERNED: final text after all three stages (cleaning, quality filtering,
+  bias mitigation) — exactly out/balanced_set.jsonl as produced by pipeline.py.
 
-هر دو پیکره به یک اندازه (بر اساس تعداد رکورد) نمونه‌گیری می‌شوند تا مقایسه Perplexity
-منصفانه باشد (کنترل حجم داده آموزشی) و مقدار متفاوت صرفاً از تفاوت کیفیت/پاکیزگی متن
-ناشی شود، نه از تفاوت حجم.
+Both corpora are sampled to the same size (by record count) so the perplexity
+comparison is fair (training-data volume is controlled), and any difference in
+outcome comes purely from text quality/cleanliness, not from a volume
+difference.
 
-هم‌چنین یک validation set کاملاً جدا (بدون همپوشانی با هیچ‌کدام از دو پیکره آموزشی)
-از بخشی مجزا از balanced_set.jsonl کنار گذاشته می‌شود.
+A validation set with no overlap with either training corpus is also held out
+from a separate slice of balanced_set.jsonl.
 """
 import json
 import os
@@ -27,11 +28,11 @@ BALANCED_PATH = os.path.join(CODE_DIR, "out", "balanced_set.jsonl")
 OUT_DIR = os.path.join(HERE, "corpora")
 os.makedirs(OUT_DIR, exist_ok=True)
 
-VAL_SIZE = 20000  # اندازه validation set مشترک (کاملاً جدا از هر دو پیکره آموزشی)
+VAL_SIZE = 20000  # size of the shared validation set (fully separate from both training corpora)
 
 
 def stream_raw_texts(path, limit=None):
-    """استریم متن خام از فایل اصلی JSON (بدون هیچ پردازشی) - برای پیکره RAW."""
+    """Streams raw text from the source JSON file (no processing at all) — for the RAW corpus."""
     import sys
     sys.path.insert(0, CODE_DIR)
     from pipeline import stream_objects  # noqa: E402
@@ -62,7 +63,7 @@ def load_governed_records(path):
 
 def main():
     if not os.path.exists(BALANCED_PATH):
-        print("balanced_set.jsonl یافت نشد. ابتدا pipeline.py را کامل اجرا کنید.")
+        print("balanced_set.jsonl not found. Run pipeline.py to completion first.")
         return
 
     governed = load_governed_records(BALANCED_PATH)
@@ -75,11 +76,12 @@ def main():
 
     print(f"governed total={len(governed)} val={len(val_records)} train_governed={target_train_size}")
 
-    # پیکره RAW: به همان تعداد train_governed، از متن خام (بدون هیچ فیلتری) نمونه می‌گیریم.
-    # چون RAW شامل رکوردهایی است که در GOVERNED هم حذف نشده‌اند، برای استقلال دو پیکره،
-    # به سادگی یک نمونه تصادفی مستقل و هم‌اندازه از کل فایل خام برمی‌داریم (نه فقط زیرمجموعه‌ی
-    # حذف‌شده) - چون هدف مقایسه «متن خام معمولی» با «متن پالایش‌شده» است، نه دو مجموعه‌ی
-    # منحصر به فرد.
+    # RAW corpus: sample the same number of records as train_governed, from raw
+    # text with no filtering at all. Since RAW may include records that also
+    # survived into GOVERNED, we simply draw an independent, equal-size random
+    # sample from the whole raw file (not just the excluded subset) — because
+    # the goal is comparing "ordinary raw text" against "governed text," not
+    # producing two mutually exclusive sets.
     raw_texts = []
     for text in stream_raw_texts(DATA_PATH, limit=target_train_size * 3):
         raw_texts.append(text)

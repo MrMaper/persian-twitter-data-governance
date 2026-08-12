@@ -1,14 +1,15 @@
 """
-مقایسه سه رویکرد پیش‌پردازش روی همان نمونه و همان فرمول Q(t)/B(t) (پاسخ به داور ۲،
-بند ۱): تنها بخش نرمال‌سازی/توکن‌سازی تغییر می‌کند، بقیه منطق (آستانه‌ها، ضرایب،
-فهرست واژگان باردار) ثابت می‌ماند تا مقایسه واقعاً apples-to-apples باشد.
+Compares three preprocessing backends on the same sample and the same Q(t)/B(t)
+formula: only the normalization/tokenization step changes; everything else
+(thresholds, coefficients, bias lexicon) is held fixed, so the comparison is a
+true apples-to-apples test.
 
-(الف) Regex/Naive: split بر پایه فاصله، بدون نرمال‌سازی حروف عربی/فارسی.
-(ب) Hazm: Normalizer + WordTokenizer (همان چیزی که در pipeline.py اصلی استفاده می‌شود).
-(ج) Parsivar: Normalizer + Tokenizer.
+(a) Regex/Naive: whitespace split, no Arabic/Persian character normalization.
+(b) Hazm: Normalizer + WordTokenizer (what the main pipeline.py uses).
+(c) Parsivar: Normalizer + Tokenizer.
 
-Virastar (ابزار Ruby) در اکوسیستم پایتون این پروژه در دسترس نیست و به‌صراحت به‌عنوان
-محدودیت در متن مقاله ذکر می‌شود.
+Virastar (a Ruby tool) is not available in this project's Python ecosystem and
+is explicitly noted as a limitation in the paper.
 """
 import json
 import os

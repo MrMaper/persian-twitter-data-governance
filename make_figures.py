@@ -84,13 +84,14 @@ def make_flowchart():
 
 
 def make_quality_hist():
-    """رسم هیستوگرام از امتیازهای Q(t) واقعی که pipeline.py حین اجرا روی داده واقعی
-    در article/out/q_before.jsonl و q_after.jsonl ذخیره کرده (نمونه reservoir تا ۵۰هزار مقدار)."""
+    """Plots a histogram of the real Q(t) scores that pipeline.py saved while
+    running on real data, in out/q_before.jsonl and out/q_after.jsonl
+    (a reservoir sample of up to 50k values)."""
     import numpy as np
     before = _load_jsonl_field(os.path.join(OUT_DIR, "q_before.jsonl"), "q")
     after = _load_jsonl_field(os.path.join(OUT_DIR, "q_after.jsonl"), "q")
     if not before or not after:
-        print("داده واقعی Q(t) یافت نشد. ابتدا pipeline.py را روی داده واقعی اجرا کنید.")
+        print("Real Q(t) data not found. Run pipeline.py on real data first.")
         return
     mean_before = sum(before) / len(before)
     mean_after = sum(after) / len(after)
@@ -107,11 +108,11 @@ def make_quality_hist():
 
 
 def make_funnel():
-    """رسم نمودار قیفی از شمارش واقعی مراحل که pipeline.py در tools/real_results.json
-    ذخیره کرده - هیچ عددی دستی/فرضی نیست."""
+    """Plots a funnel chart from the real per-stage counts that pipeline.py
+    saved in out/real_results.json — no manual/hypothetical numbers."""
     results = _load_json(RESULTS_PATH)
     if not results or "funnel" not in results:
-        print("داده واقعی funnel یافت نشد. ابتدا pipeline.py را روی داده واقعی اجرا کنید.")
+        print("Real funnel data not found. Run pipeline.py on real data first.")
         return
     f = results["funnel"]
     stages = [
@@ -123,8 +124,9 @@ def make_funnel():
     labels = [s[0] for s in stages]
     values = [s[1] for s in stages]
     total = values[0]
-    # چون افت واقعی داده بسیار تندتر از نسخه قبلی (فرضی) است، برچسب‌ها همیشه بیرون
-    # میله (باالای آن) قرار می‌گیرند تا برای میله‌های باریک هم بریده نشوند.
+    # Real data drops off much more steeply than the earlier hypothetical
+    # version, so labels are always placed outside (above) the bar, to avoid
+    # being clipped even for very narrow bars.
     fig, ax = plt.subplots(figsize=(9, 6))
     for i, (lab, val) in enumerate(zip(labels, values)):
         width = max((val / total) * 0.8, 0.02)
@@ -145,8 +147,9 @@ def make_funnel():
 
 
 def make_wordcloud():
-    """ابر کلمات از فراوانی واقعی توکن‌های فارسی که pipeline.py حین اجرا روی داده واقعی
-    در article/out/word_freq_before.json و word_freq_after.json ذخیره کرده."""
+    """Builds a word cloud from the real Persian token frequencies that
+    pipeline.py saved while running on real data, in out/word_freq_before.json
+    and out/word_freq_after.json."""
     from wordcloud import WordCloud
     import arabic_reshaper
     from bidi.algorithm import get_display
@@ -155,9 +158,9 @@ def make_wordcloud():
     freq_before_raw = _load_json(os.path.join(OUT_DIR, "word_freq_before.json"))
     freq_after_raw = _load_json(os.path.join(OUT_DIR, "word_freq_after.json"))
     if not freq_before_raw or not freq_after_raw:
-        print("داده واقعی فراوانی کلمات یافت نشد. ابتدا pipeline.py را روی داده واقعی اجرا کنید.")
+        print("Real word-frequency data not found. Run pipeline.py on real data first.")
         return
-    # ۳۰ واژه پرتکرار برای خوانایی ابر کلمات
+    # top 30 most frequent words, for word-cloud readability
     freq_before_raw = dict(sorted(freq_before_raw.items(), key=lambda kv: -kv[1])[:30])
     freq_after_raw = dict(sorted(freq_after_raw.items(), key=lambda kv: -kv[1])[:30])
 
